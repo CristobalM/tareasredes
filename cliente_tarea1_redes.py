@@ -11,13 +11,11 @@ port = int(sys.argv[1])
 
 RECEIVE_BUF_SIZE = 1024
 
-
-def run_server():
+def run_client():
     socket = libsock.socket(libsock.AF_INET, libsock.SOCK_DGRAM)  # SOCK_DGRAM es UDP
-    socket.bind((addr, port))
+    socket.connect((addr, port))
 
-    while True:
-        data, address = socket.recvfrom(RECEIVE_BUF_SIZE)
-        print(data.decode())
+    socket.send('hola\n'.encode())
 
-run_server()
+
+run_client()
