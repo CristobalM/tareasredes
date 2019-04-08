@@ -18,6 +18,81 @@ ASK_DNS_SERVER_PORT = 53
 LOGGING = True
 
 
+class QuestionParser:
+    def __init__(self, reader):
+        self.reader = reader
+        self.dns_qname = None
+        self.dns_qtype = None
+        self.dns_qclass = None
+        self.sections = []
+
+    def process(self):
+        while True:
+            try:
+                length_oct = self.reader.read(1)
+            except Exception:
+                return False
+            if length_oct == 0:
+                break
+
+            try:
+                section = self.reader.read(length_oct)
+            except Exception:
+                return False
+            self.sections.append(length_oct)
+            self.sections.append(section)
+
+        #self.dns_qname = '.'.join(self.sections)
+        self.dns_qname = ''.join(self.sections)
+
+        try:
+            self.dns_qtype = self.reader.read(2)
+            self.dns_qclass = self.reader.read(2)
+        except Exception:
+            return False
+
+        return True
+
+
+class RRParser:
+    def __init__(self, reader):
+        self.reader = reader
+        self.dns_name = None
+        self.dns_type = None
+        self.dns_class = None
+        self.dns_ttl = None
+        self.dns_rdlength = None
+
+    def process(self):
+        pass
+
+
+class DnsParser:
+    def __init__(self, dnsmsg):
+        self.dnsmsg = dnsmsg
+        self.dns_id = None
+        self.dns_flags = None
+        self.dns_qdcount = None
+        self.dns_ancount = None
+        self.dns_nscount = None
+        self.dns_arcount = None
+
+    def process_msg(self):
+        reader = io.StringIO(self.dnsmsg)
+        header = reader.read(12)
+
+        try:
+            self.dns_id, self.dns_flags, self.dns_qdcount,\
+            self.dns_ancount, self.dns_nscount, self.dns_arcount = struct.unpack('!HHHHHH', header)
+
+
+
+        except Exception:
+            return False
+
+        return True
+
+
 def cond_print(s_msg):
     global LOGGING
     if LOGGING:
@@ -60,6 +135,7 @@ def run_server():
         cond_print(external_resp_data)
 
         respond_dns_query_to_user(socket, address, external_resp_data)
+
 
 
 run_server()
