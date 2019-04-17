@@ -25,8 +25,10 @@ class QuestionParser:
         self.dns_qtype = None
         self.dns_qclass = None
         self.sections = []
+        self.question = None
 
     def process(self):
+        question = []
         while True:
             try:
                 length_oct = self.reader.read(1)
@@ -41,9 +43,10 @@ class QuestionParser:
                 return False
             self.sections.append(length_oct)
             self.sections.append(section)
+            question.append(section)
 
-        #self.dns_qname = '.'.join(self.sections)
         self.dns_qname = ''.join(self.sections)
+        self.question = '.'.join(question)
 
         try:
             self.dns_qtype = self.reader.read(2)
@@ -52,6 +55,9 @@ class QuestionParser:
             return False
 
         return True
+
+    def get_question(self):
+        return self.question
 
 
 class RRParser:
