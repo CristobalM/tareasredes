@@ -8,7 +8,7 @@ class Log:
         
     def server_log(self):
     
-        host_name = self.hostname.get_question()
+        host_name = self.hostname.pop().get_question()
         host_name_nob = host_name.replace("b","") #hostname sin b
         format_host_name = host_name_nob.translate(str.maketrans({"'":None}))
         arreglo=""
