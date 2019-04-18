@@ -67,7 +67,7 @@ def run_server():
         cond_print("---------------\n Recibido OK\n")
 
         dns_id_int = dns_parser_input.dns_id
-        user_query = '-'.join([';'.join([qr.question, qr.dns_qtype, qr.dns_qclass])
+        user_query = '-'.join([';'.join(map(lambda x: str(x),[qr.question, qr.dns_qtype, qr.dns_qclass]))
                                for qr in dns_parser_input.questions_records]) + '|' + \
                      '-'.join([dns_flags, dns_qdcount, dns_ancount, dns_nscount,dns_arcount])
 
