@@ -31,7 +31,7 @@ class QuestionParser:
 
     def process(self):
         question = []
-        self.dns_qname = ''
+        self.dns_qname = b''
         while True:
             try:
                 first_read = self.reader.read(1)
@@ -53,7 +53,7 @@ class QuestionParser:
             #self.dns_qname += struct.pack('!s', section)
             question.append(section)
 
-        self.question = '.'.join(question)
+        self.question = '.'.join(str(question))
         cond_print("Question size: %d" % len(self.question))
 
         try:
@@ -92,7 +92,7 @@ class RRParser:
         if not root:
             print("Not in ROOT")
         else:
-            self.dns_name = ''
+            self.dns_name = b''
         #dns_name = ''
         pointer_mask = 0b11000000
         sections = []
@@ -220,7 +220,7 @@ class DnsParser:
 
     def pack(self, _id=None):
         if True: # No funciona esto
-            body = ''
+            body = b''
             for item in itertools.chain(*self.record_lists):
                 body += item.pack()
 
