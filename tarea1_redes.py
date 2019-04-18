@@ -3,7 +3,7 @@ import socket as libsock
 import io
 import struct
 import binascii
-
+import itertools
 
 if len(sys.argv) < 2:
     print('Ingrese puerto')
@@ -34,8 +34,9 @@ class QuestionParser:
         self.dns_qname = ''
         while True:
             try:
-                (length_oct,) = struct.unpack('B', self.reader.read(1))
+                (length_oct,) = struct.unpack('!B', self.reader.read(1))
             except Exception:
+                print("There was an EXCEPTION in QuestionParser")
                 return False
             if length_oct == 0:
                 break
@@ -43,9 +44,10 @@ class QuestionParser:
             try:
                 section = self.reader.read(length_oct)
             except Exception:
+                print("There was an EXCEPTION in QuestionParser")
                 return False
-            self.dns_qname += struct.pack('B', length_oct)
-            self.dns_qname += struct.pack('s', section)
+            self.dns_qname += struct.pack('!B', length_oct)
+            self.dns_qname += struct.pack('!s', section)
             question.append(section)
 
         self.question = '.'.join(question)
@@ -55,12 +57,16 @@ class QuestionParser:
             self.dns_qtype = self.reader.read(2)
             self.dns_qclass = self.reader.read(2)
         except Exception:
+            print("There was an EXCEPTION in QuestionParser")
             return False
 
         return True
 
     def get_question(self):
         return self.question
+
+    def pack(self):
+        return self.dns_qname + self.dns_qtype + self.dns_qclass
 
 
 class RRParser:
@@ -74,53 +80,67 @@ class RRParser:
         self.answer = None
         self.sections = None
         self.unpacked_answer = None
+        self.metadata = None
+
+    def pack(self):
+        return self.dns_name + self.metadata + self.answer
 
     def process_name(self, root=True):
+        if not root:
+            print("Not in ROOT")
+        else:
+            self.dns_name = ''
         dns_name = ''
         pointer_mask = 0b11000000
         sections = []
 
         while True:
-            try:
-                (length_oct,) = struct.unpack('B', self.reader.read(1))
-            except Exception:
-                return False
+
+            first_read = self.reader.read(1)
+            if len(first_read) == 0:
+                print('ZERO SIZE READ')
+                break
+
+            (length_oct,) = struct.unpack('B', first_read)
+
+            print("LENGTH OCT: " + str(length_oct))
+
             if length_oct == 0:
                 break
 
-            try:
-                if length_oct & pointer_mask:
-                    other_byte = self.reader.read(1)
-                    other_byte_u = struct.unpack('B', other_byte)
-                    dns_name += struct.pack('B', length_oct) + other_byte
-                    offset = ((length_oct & ~pointer_mask) << 8) + other_byte
-                    position = self.reader.tell()
-                    self.reader.seek(offset)
-                    pointer_resolved_result, sections_children = self.process_name(root=False)
-                    self.reader.seek(position)
-                    sections = sections + sections_children
-                    dns_name += pointer_resolved_result
+            if length_oct & pointer_mask:
+                other_byte = self.reader.read(1)
+                (other_byte_u,) = struct.unpack('B', other_byte)
+                dns_name += first_read + other_byte
+                offset = ((length_oct & ~pointer_mask) << 8) | other_byte_u
+                position = self.reader.tell()
+                self.reader.seek(offset)
+                self.process_name(root=False)
+                self.reader.seek(position)
+                break
 
-                else:
-                    section = self.reader.read(length_oct)
-                    dns_name += struct.pack('B', length_oct)
-                    dns_name += struct.pack('s', section)
-                    sections.append(section)
-            except Exception:
-                return False
+            else:
+                section = self.reader.read(length_oct)
+                dns_name += struct.pack('!B', length_oct)
+                dns_name += struct.pack('!s', section)
+                sections.append(section)
 
         if root:
             self.dns_name = dns_name
             self.sections = sections
         else:
+            print("Getting out of child")
             return dns_name, sections
 
     def process_inner(self):
-        self.dns_type, self.dns_class, self.dns_ttl, self.dns_rdlength = struct.unpack('!HHIH', self.reader.read(10))
+        self.metadata = self.reader.read(10)
+        print('Metadata is')
+        print(self.metadata)
+        self.dns_type, self.dns_class, self.dns_ttl, self.dns_rdlength = struct.unpack('!HHIH', self.metadata)
 
     def process_rdata(self):
         self.answer = self.reader.read(self.dns_rdlength)
-        self.unpacked_answer = struct.unpack('B'*self.dns_rdlength, self.answer)
+        self.unpacked_answer = struct.unpack('B' * self.dns_rdlength, self.answer)
 
     def process(self):
         cond_print("Processing Name in RR Record")
@@ -139,11 +159,11 @@ class RRParser:
         cond_print("unpacked rdata: %s " % str(self.unpacked_answer))
 
 
-
 class DnsParser:
     def __init__(self, dnsmsg):
-        self.dnsmsg = dnsmsg # dnsmsg.encode(encoding='UTF-8') if isinstance(dnsmsg, str) else dnsmsg
+        self.dnsmsg = dnsmsg  # dnsmsg.encode(encoding='UTF-8') if isinstance(dnsmsg, str) else dnsmsg
 
+        self.header = None
         self.dns_id = None
         self.dns_flags = None
         self.dns_qdcount = None
@@ -151,41 +171,58 @@ class DnsParser:
         self.dns_nscount = None
         self.dns_arcount = None
 
+        self.questions_records = []
+        self.answers_records = []
+        self.authority_records = []
+        self.additional_records = []
+        self.record_lists = [self.questions_records, self.answers_records, self.authority_records, self.additional_records]
+
     def process_msg(self):
         reader = io.BytesIO(self.dnsmsg)
-        header = reader.read(12)
+        self.header = reader.read(12)
 
-        self.dns_id, self.dns_flags, self.dns_qdcount,\
-        self.dns_ancount, self.dns_nscount, self.dns_arcount = struct.unpack('!HHHHHH', header)
+        self.dns_id, self.dns_flags, self.dns_qdcount, \
+        self.dns_ancount, self.dns_nscount, self.dns_arcount = struct.unpack('!HHHHHH',  self.header)
 
-        questions_records = []
-        answers_records = []
-        authority_records = []
-        additional_records = []
+
 
         cond_print("Questions:")
         for i in range(self.dns_qdcount):
             qrecord = QuestionParser(reader)
-            questions_records.append(qrecord)
+            self.questions_records.append(qrecord)
             worked_question = qrecord.process()
             cond_print(qrecord.get_question() if worked_question else 'Question Failed')
 
         for i in range(self.dns_ancount):
             anrecord = RRParser(reader)
-            answers_records.append(anrecord)
+            self.answers_records.append(anrecord)
             anrecord.process()
 
         for i in range(self.dns_nscount):
             aurecord = RRParser(reader)
-            authority_records.append(aurecord)
+            self.authority_records.append(aurecord)
             aurecord.process()
 
         for i in range(self.dns_arcount):
             addirecord = RRParser(reader)
-            additional_records.append(addirecord)
+            self.additional_records.append(addirecord)
             addirecord.process()
 
         return True
+
+    def pack(self, _id=None):
+        if False: # No funciona esto
+            body = ''
+            for item in itertools.chain(*self.record_lists):
+                body += item.pack()
+
+            return self.header + body
+
+        reader = io.BytesIO(self.dnsmsg)
+        reader.seek(2)
+        the_id = _id if _id is not None else self.dns_id
+        allwithoutid = reader.read()
+        return struct.pack('!H', the_id)+ allwithoutid
 
 
 def cond_print(s_msg):
@@ -233,7 +270,7 @@ def run_server():
         dns_arcount = dns_parser_input.dns_arcount
 
         cond_print("id: %s\nflags: %s\nqdcount: %s\nancount: %s\nnscount: %s\narcount: %s" %
-                   (dns_id, dns_flags, dns_qdcount, dns_ancount, dns_nscount, dns_arcount) )
+                   (dns_id, dns_flags, dns_qdcount, dns_ancount, dns_nscount, dns_arcount))
 
         cond_print("Recibiendo: \n---------------")
         cond_print(data)
@@ -248,9 +285,10 @@ def run_server():
 
         dns_response = DnsParser(external_resp_data)
         dns_response.process_msg()
+        processed_msg = dns_response.pack()
 
-        respond_dns_query_to_user(socket, address, external_resp_data)
-
+        #respond_dns_query_to_user(socket, address, external_resp_data)
+        respond_dns_query_to_user(socket, address, processed_msg)
 
 
 run_server()
