@@ -2,9 +2,10 @@ import datetime
 
 class Log:
 
-    def __init__(self, hostname,ip_respuesta):
+    def __init__(self, hostname,ip_respuesta, address):
         self.hostname=hostname
         self.ip_respuesta=ip_respuesta
+        self.addres = address
         
     def server_log(self):
     
@@ -26,7 +27,7 @@ class Log:
         currentDT = datetime.datetime.now() #tiempo actual
         str_currentDT = str(currentDT)      #tiempo actual en string
 
-        formateado= str_currentDT + " " + format_host_name + " " +  ips +"\n"
+        formateado= str_currentDT + " IPOrigen:" + str(self.addres[0])+ " " + format_host_name + " " + "Respuestas: "+  ips +"\n"
         f = open("log.txt", "a")
         f.write(formateado)
         f.close()

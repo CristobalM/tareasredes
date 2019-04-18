@@ -2,6 +2,7 @@ import sys
 import socket as libsock
 import copy
 import json
+import binascii
 
 from console_logging import cond_print
 
@@ -14,7 +15,7 @@ with open('config.json') as json_file:
     config_file = json.load(json_file)
     hostname = config_file['hostname']
     ASK_DNS_SERVER_HOSTNAME = config_file['resolver']
-    ASK_DNS_SERVER_PORT = int(config_file['port'])
+    ASK_DNS_SERVER_PORT = config_file['port']
 
 with open('filtros.json') as json_file:
     filtros_file = json.load(json_file)
@@ -35,6 +36,7 @@ RECEIVE_BUF_SIZE = 65500
 
 LOGGING = True
 
+tipos_permitidos = ["000f","0001","001c"]
 
 def make_dns_query(hostname, port, query):
     socket = libsock.socket(libsock.AF_INET, libsock.SOCK_DGRAM)
@@ -61,6 +63,9 @@ def url_formatter(string):
     format_host_name = host_name_nob.translate(str.maketrans({"'": None}))
     return format_host_name
 
+def binary_to_hex(data): #transformar input binario en hexadecimal
+    aux=binascii.hexlify(data)
+    return aux.decode('utf-8') #transformar input hexadecimal en binario
 
 def run_server():
     socket = libsock.socket(libsock.AF_INET, libsock.SOCK_DGRAM)  # SOCK_DGRAM es UDP
@@ -74,6 +79,8 @@ def run_server():
 
         data, address = socket.recvfrom(RECEIVE_BUF_SIZE)
         dns_parser_input = DnsParser(data)
+
+        origin_addres= address
 
         process_msg_state = dns_parser_input.process_msg()
 
@@ -99,12 +106,19 @@ def run_server():
         string_nombre = url_formatter(host_name)
 
         
-        # Aqui esta el ciclo para matar a los baneados
+        # Aqui esta el ciclo para matar a los del filtro
         for baneado in Ban_List:
             if string_nombre == baneado:
                 check = 1
             else:
                 continue
+
+        #Aqui limitar solo a A, AAAA, MX
+        question_type = copy.deepcopy(dns_parser_input.questions_records[0].dns_qtype)
+        holi = binary_to_hex(question_type)
+        
+        #Aqui van ciclo para cambiar ip
+        
 
         # aqui hay que ver como manejar la salida
         if check==0: #
@@ -121,7 +135,7 @@ def run_server():
                 dns_parser_cache.process_msg()
                 ip_name = dns_parser_cache.answers_records
                 host_name = copy.deepcopy(dns_parser_input.questions_records)
-                log_con_cache = Log(host_name, ip_name)
+                log_con_cache = Log(host_name, ip_name, address)
                 log_con_cache.server_log()
                 print("Log con info de cache guardado")
 
@@ -138,7 +152,7 @@ def run_server():
                 cache.save_data(user_query, dns_response)
                 cond_print("Respondiendo de google: \n---------------")
                 # respond_dns_query_to_user(socket, address, external_resp_data)
-                respond_dns_query_to_user(socket, address, processed_msg)
+                respond_dns_query_to_user(socket, address, processed_msg, address)
                 cond_print("OK: \n---------------")
 
                 # -----------------------------------------------------------------------------------
