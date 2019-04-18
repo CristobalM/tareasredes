@@ -1,0 +1,19 @@
+{"family": {
+    "name": "Mary",
+    "age": "32",
+    "sex": "female",
+    "kids": [
+      {
+        "name": "jim",
+        "age": "10",
+        "sex": "male",
+        "dob_year": "2007",
+        "ssn": "123-23-1234"
+      },
+      {
+        "name": "jill",
+        "age": "6",
+        "sex": "female",
+        "dob_year": "2011",
+        "ssn": "123-23-1235"
+      }]}}
