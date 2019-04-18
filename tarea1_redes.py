@@ -53,7 +53,7 @@ class QuestionParser:
             #self.dns_qname += struct.pack('!s', section)
             question.append(section)
 
-        self.question = '.'.join(str(question))
+        self.question = '.'.join(map(lambda x: str(x),question))
         cond_print("Question size: %d" % len(self.question))
 
         try:
