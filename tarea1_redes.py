@@ -4,6 +4,7 @@ import io
 import struct
 import binascii
 import itertools
+import datetime
 
 if len(sys.argv) < 2:
     print('Ingrese puerto')
@@ -54,6 +55,7 @@ class QuestionParser:
             question.append(section)
 
         self.question = '.'.join(map(lambda x: str(x),question))
+
         cond_print("Question size: %d" % len(self.question))
 
         try:
@@ -257,6 +259,31 @@ def respond_dns_query_to_user(socket, addr, ans):
 def bin_to_text(bin_inp, m='08b'):
     return format(bin_inp, m)
 
+def server_log(hostname,ip_respuesta):
+    
+    host_name = hostname.get_question()
+    format_host_name = host_name.replace("b","") #hostname sin b
+    ips = unlisted_info(ip_respuesta)
+
+ 
+    currentDT = datetime.datetime.now() #tiempo actual
+    str_currentDT = str(currentDT)      #tiempo actual en string
+
+    formateado= str_currentDT + " " + format_host_name + " " +  ips +"\n"
+    f = open("log.txt", "a")
+    f.write(formateado)
+    f.close()
+
+def unlisted_info(lista): #para sacar info de los arreglos
+    arreglo=""
+    i=1
+    while len(lista)>0:
+        popped_element=lista.pop()
+        answer = popped_element.unpacked_answer
+        arreglado='.'.join(map(str,answer))
+        arreglo=arreglo+ "IP" +str(i) +": "+arreglado + "  "
+        i+=1
+    return arreglo
 
 def run_server():
     socket = libsock.socket(libsock.AF_INET, libsock.SOCK_DGRAM)  # SOCK_DGRAM es UDP
@@ -266,6 +293,7 @@ def run_server():
         cond_print("\n\nEn espera de queries DNS...\n")
 
         data, address = socket.recvfrom(RECEIVE_BUF_SIZE)
+        print(data)
 
         dns_parser_input = DnsParser(data)
         process_msg_state = dns_parser_input.process_msg()
@@ -297,6 +325,10 @@ def run_server():
 
         #respond_dns_query_to_user(socket, address, external_resp_data)
         respond_dns_query_to_user(socket, address, processed_msg)
-
+        
+        host_name= dns_parser_input.questions_records.pop() #dominio preguntado
+        ip_name=dns_response.answers_records
+        server_log(host_name,ip_name)
+        
 
 run_server()
