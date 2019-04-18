@@ -34,7 +34,9 @@ class QuestionParser:
         self.dns_qname = ''
         while True:
             try:
-                (length_oct,) = struct.unpack('!B', self.reader.read(1))
+                first_read = self.reader.read(1)
+                self.dns_qname += first_read
+                (length_oct,) = struct.unpack('!B', first_read)
             except Exception:
                 print("There was an EXCEPTION in QuestionParser")
                 return False
@@ -43,11 +45,12 @@ class QuestionParser:
 
             try:
                 section = self.reader.read(length_oct)
+                self.dns_qname += section
             except Exception:
                 print("There was an EXCEPTION in QuestionParser")
                 return False
-            self.dns_qname += struct.pack('!B', length_oct)
-            self.dns_qname += struct.pack('!s', section)
+            #self.dns_qname += struct.pack('!B', length_oct)
+            #self.dns_qname += struct.pack('!s', section)
             question.append(section)
 
         self.question = '.'.join(question)
@@ -90,18 +93,19 @@ class RRParser:
             print("Not in ROOT")
         else:
             self.dns_name = ''
-        dns_name = ''
+        #dns_name = ''
         pointer_mask = 0b11000000
         sections = []
 
         while True:
-
             first_read = self.reader.read(1)
+            if root:
+                self.dns_name += first_read
             if len(first_read) == 0:
                 print('ZERO SIZE READ')
                 break
 
-            (length_oct,) = struct.unpack('B', first_read)
+            (length_oct,) = struct.unpack('!B', first_read)
 
             print("LENGTH OCT: " + str(length_oct))
 
@@ -110,27 +114,31 @@ class RRParser:
 
             if length_oct & pointer_mask:
                 other_byte = self.reader.read(1)
-                (other_byte_u,) = struct.unpack('B', other_byte)
-                dns_name += first_read + other_byte
+                if root:
+                    self.dns_name += other_byte
+                (other_byte_u,) = struct.unpack('!B', other_byte)
+                #dns_name += first_read + other_byte
                 offset = ((length_oct & ~pointer_mask) << 8) | other_byte_u
                 position = self.reader.tell()
                 self.reader.seek(offset)
                 self.process_name(root=False)
                 self.reader.seek(position)
                 break
-
             else:
                 section = self.reader.read(length_oct)
-                dns_name += struct.pack('!B', length_oct)
-                dns_name += struct.pack('!s', section)
+                if root:
+                    self.dns_name += section
+                #dns_name += struct.pack('!B', length_oct)
+                #dns_name += struct.pack('!s', section)
                 sections.append(section)
 
         if root:
-            self.dns_name = dns_name
+            #self.dns_name = dns_name
             self.sections = sections
         else:
             print("Getting out of child")
-            return dns_name, sections
+            return True
+            #return dns_name, sections
 
     def process_inner(self):
         self.metadata = self.reader.read(10)
@@ -211,7 +219,7 @@ class DnsParser:
         return True
 
     def pack(self, _id=None):
-        if False: # No funciona esto
+        if True: # No funciona esto
             body = ''
             for item in itertools.chain(*self.record_lists):
                 body += item.pack()
