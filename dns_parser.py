@@ -57,11 +57,19 @@ class DnsParser:
 
         return True
 
-    def get_header_with_id(self, dns_id):
-        reader = io.BytesIO(self.dnsmsg)
-        reader.seek(2)
-        rest_of_header = reader.read(10)
-        return struct.pack('!H', dns_id) + rest_of_header
+    def get_header_with_id(self, dns_id=None):
+        if dns_id is None:
+            dns_id = self.dns_id
+        header = struct.pack('!HHHHHH',
+                             dns_id, self.dns_flags,
+                             self.dns_qdcount, self.dns_ancount,
+                             self.dns_nscount, self.dns_arcount)
+        return header
+        if False:
+            reader = io.BytesIO(self.dnsmsg)
+            reader.seek(2)
+            rest_of_header = reader.read(10)
+            return struct.pack('!H', dns_id) + rest_of_header
 
     def pack(self, _id=None):
         if _id is None:

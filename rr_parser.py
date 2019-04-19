@@ -3,8 +3,11 @@ import struct
 from console_logging import cond_print
 
 
+def convert_to_int(x):
+    return int.from_bytes(x, byteorder='big')
+
 class RRParser:
-    def __init__(self, reader):
+    def __init__(self, reader=None):
         self.reader = reader
         self.dns_name = None
         self.dns_type = None
@@ -17,7 +20,51 @@ class RRParser:
         self.metadata = None
 
     def pack(self):
+        if self.reader is None:
+            self.build_metadata()
         return self.dns_name + self.metadata + self.answer
+
+
+
+    def build_metadata(self):
+        cond_print('MetadataBuild')
+        cond_print(int.from_bytes(self.dns_type, byteorder='big'))
+        #cond_print(int(self.dns_class))
+        #cond_print(int(self.dns_ttl))
+        #cond_print(int(self.dns_rdlength))
+        cond_print('MetadataBuildEnd')
+
+        ptype = convert_to_int(self.dns_type)
+        pclass = convert_to_int(self.dns_class)
+        pttl = self.dns_ttl
+        prdl = self.dns_rdlength #convert_to_int(self.dns_rdlength)
+
+        self.metadata = struct.pack('!HHIH',
+                                    ptype,
+                                    pclass,
+                                    pttl,
+                                    prdl)
+
+
+
+
+    def set_answer_from_string(self, str_answer):
+        numbers_as_str = str_answer.split('.')
+        numbers = [int(x) for x in numbers_as_str]
+        packed_ip = struct.pack('!' + 'B'*len(numbers), *numbers)
+
+        cond_print('rd_l')
+        cond_print(numbers)
+
+        cond_print('"Numbers: "')
+
+        cond_print(numbers)
+
+        cond_print('"Packed IP:"')
+        cond_print(packed_ip)
+        self.answer = packed_ip
+        self.dns_rdlength = len(numbers)
+        self.unpack_answer()
 
     def process_name(self, root=True):
         if not root:
@@ -72,9 +119,12 @@ class RRParser:
         print(self.metadata)
         self.dns_type, self.dns_class, self.dns_ttl, self.dns_rdlength = struct.unpack('!HHIH', self.metadata)
 
+    def unpack_answer(self):
+        self.unpacked_answer = struct.unpack('B' * self.dns_rdlength, self.answer)
+
     def process_rdata(self):
         self.answer = self.reader.read(self.dns_rdlength)
-        self.unpacked_answer = struct.unpack('B' * self.dns_rdlength, self.answer)
+        self.unpack_answer()
 
     def process(self):
         cond_print("Processing Name in RR Record")

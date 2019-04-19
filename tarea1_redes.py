@@ -8,6 +8,7 @@ from console_logging import cond_print
 
 from cache_tarea1 import Cache
 from dns_parser import DnsParser
+from redirect import Redirect
 
 from server_log import Log
 
@@ -142,17 +143,28 @@ def run_server():
                 print("Log con info de cache guardado")
 
             else:
-                cond_print("Esperando respuesta de google: \n---------------")
-                asking_socket = make_dns_query(ASK_DNS_SERVER_HOSTNAME, ASK_DNS_SERVER_PORT, data)
-                external_resp_data, external_resp_addr = asking_socket.recvfrom(RECEIVE_BUF_SIZE)
-                cond_print("---------------\n Recibida respuesta:\n")
-                cond_print(external_resp_data)
-                dns_response = DnsParser(external_resp_data)
-                dns_response.process_msg()
+                raw_question = dns_parser_input.questions_records[0].raw_question if len(dns_parser_input.questions_records) > 0 else ''
+                raw_question = '.'.join(map(lambda x: x.decode('utf-8'), raw_question))
+                if raw_question in Redireccion:
+                    cond_print('redirect question: %s to %s' % (raw_question, Redireccion[raw_question]))
+                    redirect = Redirect(dns_parser_input, Redireccion[raw_question])
+                    redirect.process()
+                    dns_response = redirect.get_dns_parser()
+                else:
+                    cond_print('Not to redirect question: %s' % raw_question)
+
+                    cond_print("Esperando respuesta de google: \n---------------")
+                    asking_socket = make_dns_query(ASK_DNS_SERVER_HOSTNAME, ASK_DNS_SERVER_PORT, data)
+                    external_resp_data, external_resp_addr = asking_socket.recvfrom(RECEIVE_BUF_SIZE)
+                    cond_print("---------------\n Recibida respuesta:\n")
+                    cond_print(external_resp_data)
+                    dns_response = DnsParser(external_resp_data)
+                    dns_response.process_msg()
+                    cond_print("Respondiendo de google: \n---------------")
                 processed_msg = dns_response.pack()
 
                 cache.save_data(user_query, dns_response)
-                cond_print("Respondiendo de google: \n---------------")
+
                 # respond_dns_query_to_user(socket, address, external_resp_data)
                 respond_dns_query_to_user(socket, address, processed_msg)
                 cond_print("OK: \n---------------")
@@ -162,7 +174,7 @@ def run_server():
 
                 host_name = copy.deepcopy(dns_parser_input.questions_records)
                 ip_name = copy.deepcopy(dns_response.answers_records)
-                log_sin_cache = Log(host_name, ip_name)
+                log_sin_cache = Log(host_name, ip_name, address[0])
                 log_sin_cache.server_log()
                 print("Log guardado")
 

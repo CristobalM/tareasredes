@@ -10,9 +10,11 @@ class QuestionParser:
         self.dns_qclass = None
         self.sections = []
         self.question = None
+        self.raw_question = None
 
     def process(self):
         question = []
+        self.raw_question = []
         self.dns_qname = b''
         while True:
             try:
@@ -33,6 +35,7 @@ class QuestionParser:
                 return False
             question.append(section)
 
+        self.raw_question = question
         self.question = '.'.join(map(lambda x: str(x),question))
         cond_print("Question size: %d" % len(self.question))
 
