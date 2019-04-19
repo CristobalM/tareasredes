@@ -79,7 +79,7 @@ def run_server():
 
     while True:
         check = 0  # 0 si se manda respuesta, 1 no manda respuesta
-        cond_print("\n\nEn espera de queries DNS...\n")
+        print("En espera de queries DNS...\n")
 
         data, address = socket.recvfrom(RECEIVE_BUF_SIZE)
         dns_parser_input = DnsParser(data)
@@ -122,6 +122,8 @@ def run_server():
 
         # Aqui van ciclo para cambiar ip
 
+        raw_question = b'.'.join(dns_parser_input.questions_records[0].raw_question).decode('utf-8') if len(
+            dns_parser_input.questions_records) > 0 else ''
 
         # aqui hay que ver como manejar la salida
         if check == 0:  #
@@ -167,7 +169,6 @@ def run_server():
 
                 # respond_dns_query_to_user(socket, address, external_resp_data)
                 respond_dns_query_to_user(socket, address, processed_msg)
-                cond_print("OK: \n---------------")
 
                 # -----------------------------------------------------------------------------------
                 # LOG
@@ -177,6 +178,8 @@ def run_server():
                 log_sin_cache = Log(host_name, ip_name, address[0])
                 log_sin_cache.server_log()
                 print("Log guardado")
+
+            print("OK, respondido %s : \n---------------" % raw_question)
 
 
 run_server()

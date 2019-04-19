@@ -68,7 +68,7 @@ class RRParser:
 
     def process_name(self, root=True):
         if not root:
-            print("Not in ROOT")
+            cond_print("Not in ROOT")
         else:
             self.dns_name = b''
         pointer_mask = 0b11000000
@@ -79,12 +79,12 @@ class RRParser:
             if root:
                 self.dns_name += first_read
             if len(first_read) == 0:
-                print('ZERO SIZE READ')
+                cond_print('ZERO SIZE READ')
                 break
 
             (length_oct,) = struct.unpack('!B', first_read)
 
-            print("LENGTH OCT: " + str(length_oct))
+            cond_print("LENGTH OCT: " + str(length_oct))
 
             if length_oct == 0:
                 break
@@ -110,13 +110,13 @@ class RRParser:
         if root:
             self.sections = sections
         else:
-            print("Getting out of child")
+            cond_print("Getting out of child")
             return True
 
     def process_inner(self):
         self.metadata = self.reader.read(10)
-        print('Metadata is')
-        print(self.metadata)
+        cond_print('Metadata is')
+        cond_print(self.metadata)
         self.dns_type, self.dns_class, self.dns_ttl, self.dns_rdlength = struct.unpack('!HHIH', self.metadata)
 
     def unpack_answer(self):
