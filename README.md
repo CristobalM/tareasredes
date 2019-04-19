@@ -26,6 +26,10 @@ En ambos casos se agregan un par de ejemplos de como deberían agregarse los ele
  sudo ~/.virtualenvs/tareasredes/bin/python3.6 tarea1_redes.py 53
 ´´´
 
+En el comando anterior hay que reemplazar '~/.virtualenvs/tareasredes/bin/python3.6' por la direccion de python3.6 de quien ejecuta el programa, en este caso esta en un ambiente virtual, que es lo recomendable.
+Es necesario hacer esto para asegurarse de que sudo ejecute python3.6 y no python2 porque el codigo no deberia correr en python2
+
+
  donde 53 es el puerto desde donde escucha las consultas el servidor, con sudo debido a que necesitamos permiso de administrador para poder usar ese puerto.
  
 
