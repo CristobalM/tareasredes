@@ -1,4 +1,4 @@
 {
     "ban":["google.cl", "youtube.cl"],
-    "redireccion":{"google.es": "127.0.0.1"}
+    "redireccion":{"google.es": "127.0.0.1", "wena.com": "127.0.0.1"}
 }
