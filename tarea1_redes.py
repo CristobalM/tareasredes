@@ -175,7 +175,7 @@ def run_server():
 
                 host_name = copy.deepcopy(dns_parser_input.questions_records)
                 ip_name = copy.deepcopy(dns_response.answers_records)
-                log_sin_cache = Log(host_name, ip_name, address[0])
+                log_sin_cache = Log(host_name, ip_name, address)
                 log_sin_cache.server_log()
                 print("Log guardado")
 
