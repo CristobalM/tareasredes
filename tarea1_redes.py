@@ -36,7 +36,8 @@ RECEIVE_BUF_SIZE = 65500
 
 LOGGING = True
 
-tipos_permitidos = ["000f","0001","001c"]
+tipos_permitidos = ["000f", "0001", "001c"]
+
 
 def make_dns_query(hostname, port, query):
     socket = libsock.socket(libsock.AF_INET, libsock.SOCK_DGRAM)
@@ -63,24 +64,26 @@ def url_formatter(string):
     format_host_name = host_name_nob.translate(str.maketrans({"'": None}))
     return format_host_name
 
-def binary_to_hex(data): #transformar input binario en hexadecimal
-    aux=binascii.hexlify(data)
-    return aux.decode('utf-8') #transformar input hexadecimal en binario
+
+def binary_to_hex(data):  # transformar input binario en hexadecimal
+    aux = binascii.hexlify(data)
+    return aux.decode('utf-8')  # transformar input hexadecimal en binario
+
 
 def run_server():
     socket = libsock.socket(libsock.AF_INET, libsock.SOCK_DGRAM)  # SOCK_DGRAM es UDP
     socket.bind((hostname, port))
 
     cache = Cache.get()
-    
+
     while True:
-        check= 0 #0 si se manda respuesta, 1 no manda respuesta
+        check = 0  # 0 si se manda respuesta, 1 no manda respuesta
         cond_print("\n\nEn espera de queries DNS...\n")
 
         data, address = socket.recvfrom(RECEIVE_BUF_SIZE)
         dns_parser_input = DnsParser(data)
 
-        origin_addres= address
+        origin_addres = address
 
         process_msg_state = dns_parser_input.process_msg()
 
@@ -105,7 +108,6 @@ def run_server():
         host_name = copy.deepcopy(dns_parser_input.questions_records[0])  # variable copiada para trabajar con ella
         string_nombre = url_formatter(host_name)
 
-        
         # Aqui esta el ciclo para matar a los del filtro
         for baneado in Ban_List:
             if string_nombre == baneado:
@@ -113,15 +115,15 @@ def run_server():
             else:
                 continue
 
-        #Aqui limitar solo a A, AAAA, MX
+        # Aqui limitar solo a A, AAAA, MX
         question_type = copy.deepcopy(dns_parser_input.questions_records[0].dns_qtype)
         holi = binary_to_hex(question_type)
-        
-        #Aqui van ciclo para cambiar ip
-        
+
+        # Aqui van ciclo para cambiar ip
+
 
         # aqui hay que ver como manejar la salida
-        if check==0: #
+        if check == 0:  #
             if cache.is_saved(user_query):
                 cond_print("Respondiendo del cache: \n---------------")
 
@@ -152,7 +154,7 @@ def run_server():
                 cache.save_data(user_query, dns_response)
                 cond_print("Respondiendo de google: \n---------------")
                 # respond_dns_query_to_user(socket, address, external_resp_data)
-                respond_dns_query_to_user(socket, address, processed_msg, address)
+                respond_dns_query_to_user(socket, address, processed_msg)
                 cond_print("OK: \n---------------")
 
                 # -----------------------------------------------------------------------------------
