@@ -75,8 +75,8 @@ class CachePrivate:
             return False
         data_retrieved, timestamp = self.saved_domains[domain_name]
         delta_seconds = time.time() - timestamp
-        delta_hours = delta_seconds/3600
-        if delta_hours > 1:
+        #delta_hours = delta_seconds/3600
+        if delta_seconds > 240:
             del self.saved_domains[domain_name]
             return False
 
