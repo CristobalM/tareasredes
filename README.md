@@ -1,5 +1,10 @@
 # tareasredes
 
+## Integrantes:
+ Sebastian Donoso Diaz
+ 
+ Cristobal Miranda
+ 
 ## Supuestos:
 
 * Consideramos que como al menos se tenian que aceptar mensajes del tipo A, AAAA, y MX y los demas opcionales, decidimos aceptar todos los mensajes que pasaran por el proxy.
