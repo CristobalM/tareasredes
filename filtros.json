@@ -1,4 +1,4 @@
 {
     "ban":["google.cl", "youtube.cl"],
-    "redireccion":[["google.cl","127.0.0.1"]]
+    "redireccion":[["google.cl","127.0.0.1"],["youtube.cl","127.0.0.3"]]
 }
